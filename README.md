@@ -6,6 +6,6 @@ Arduino-based Open-source AC Waveform meter in a shield form factor for the Rasp
 - **/src** - Source files for the power meter and Raspberry Pi 3
 - **/extras** - Additional documentation for the power meter
 - **/examples** - Example sketches for the power meter in .ino (run these from the Arduino IDE) and .c
-
+- **/wiki** - Set up details and device specifications
 ## Version History
 - V1.0 - Initial Release
