@@ -51,4 +51,4 @@ compile:
 	/usr/share/arduino/hardware/tools/avr/bin/avr-gcc -Os -Wl,--gc-sections -mmcu=atmega328p -o tmp/megaPowerMeter2.cpp.elf tmp/megaPowerMeter2.cpp.o tmp/SPI.cpp.o tmp/core.a -L tmp/ -lm 
 	/usr/share/arduino/hardware/tools/avr/bin/avr-objcopy -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load --no-change-warnings --change-section-lma .eeprom=0 tmp/megaPowerMeter2.cpp.elf tmp/megaPowerMeter2.cpp.eep 
 	/usr/share/arduino/hardware/tools/avr/bin/avr-objcopy -O ihex -R .eeprom tmp/megaPowerMeter2.cpp.elf tmp/megaPowerMeter2.cpp.hex
-	sudo avrdude -p atmega328p -C ~/avrdude_gpio.conf -c pi_1 -v -U flash:w:tmp/megaPowerMeter2.cpp.hex:i
+	sudo avrdude -p atmega328p -C avrdude_gpio.conf -c pi_1 -v -U flash:w:tmp/megaPowerMeter2.cpp.hex:i

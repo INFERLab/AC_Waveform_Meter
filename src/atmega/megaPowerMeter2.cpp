@@ -25,10 +25,18 @@ void loop();
 void USART_Init(unsigned int ubrr);
 void USART_Transmit(signed char data);
 #line 22
-byte rawCode[TOTAL_RAW_BYTES];
+
+
+byte rawCode[220][TOTAL_RAW_BYTES];
 
 // for testing purposes
 unsigned long timeCycle;
+
+short last_voltage;
+short voltage;
+short cycle_num;
+bool collecting = false;
+
 
 /**
  * setup()
@@ -73,12 +81,13 @@ void setup() {
 void loop() {    
     // Set PD05/CONVST to LOW
     PORTD &= 0b11011111;
-    delayMicroseconds(10);
+    //delayMicroseconds(10);
     // Set PD05/CONVST to HIGH
     PORTD |= 0b00100000;
  
     // for debugging purposes
-    timeCycle = millis();
+    //timeCycle = millis();
+    delayMicroseconds(1);
 
     // wait for conversion to complete, if BUSY is HIGH while conversion
     while ((PIND & 0b00001000) == 8);
@@ -95,22 +104,54 @@ void loop() {
      *           ...
      * rawCode[14]  MSByte V8
      * rawCode[15]  LSByte V8
-     */ 
+     */
+    
     for(int i = 0; i < TOTAL_RAW_BYTES; i++) {
-        rawCode[i] = SPI.transfer(0x00);
+        rawCode[cycle_num][i] = SPI.transfer(0x00);
     }
                 
     // Set PB02/CS to HIGH
     PORTB |= 0b00000100;
-    int i, j;       
-    // transform values to the correct scale for each channel
-    for(i = 0, j = 0; i < NUM_CHANNELS; i++, j+= 2) {
-        // Little endian transmission (in atmega328p, data is stored in little endian)
-        USART_Transmit(rawCode[j]); // MSB
-        USART_Transmit(rawCode[j + 1]); // LSB
-        
-    }   
-    USART_Transmit('\n'); // trying a different sync byte, original was \n
+
+
+    voltage = (rawCode[cycle_num][0] << 8 ) | (rawCode[cycle_num][1]);
+
+
+    if(collecting){
+	
+	if (voltage < 0 && last_voltage > 0){
+
+	   //zero-crossing detected and therefore transmitting
+	   USART_Transmit('a');
+    	   USART_Transmit((byte) cycle_num);
+	   USART_Transmit((byte) (cycle_num>>8));
+	   
+
+	   for(int j = 0; j < cycle_num; j++) {
+		for(int i = 0; i < TOTAL_RAW_BYTES; i++) {
+		    USART_Transmit(rawCode[j][i]);
+		}
+    	   }
+
+	   
+	   //transmission done
+
+	   collecting = false;
+	   cycle_num = 0;
+       }
+    }
+
+    if(!collecting){
+	if ((voltage > 0 && last_voltage < 0)){
+    	   collecting = true;
+	   cycle_num = 0;
+       }
+    }
+
+    cycle_num++;
+
+
+    last_voltage = voltage;
 }
 
 /**

@@ -1,6 +1,8 @@
 import serial
 import struct
 from cobs import cobs
+import numpy as np
+import matplotlib.pyplot as plt
 
 #  10/(2^16) = 0.000152587890625
 #  20/(2^16) = 0.00030517578125
@@ -15,32 +17,56 @@ frameSize = 2 * NUM_CHANNELS + 1
 # if USB cable is used /dev/ttyACM0, GPIO = /dev/ttyAMA0
 ser = serial.Serial('/dev/ttyAMA0', 2000000)
 
-# save measurements
-text_file = open("test03_13.txt", "w")
-
 synced = False # synchronization
+running = True
 
-while not synced:
-    print('Trying to sync')
-    bit = ser.read()
-    print(bit) 
-    if(bit == '\x00'):
-	synced = True
+while running:
+    while not synced:
+        print('Trying to sync')
+        b = ser.read()
+        print('Successfully read')
+        if(b == 'a'):
+            synced = True
 
-print('Successfully synced')
+    print('Successfully synced',b)
 
-# infinite loop
-while 1:
-    print('Trying to read')
-    frame = ser.read(frameSize + 1) # so we read the next 0
-    print('Read')
-    # after a 0, comes 5 bytes, 1OH and 4DATA
-    data = cobs.decode(frame[0:frameSize])
-    value1 = struct.unpack(">h", data[0:2])[0]
-    value2 = struct.unpack(">h", data[2:4])[0]
-    data1 = float(value1) * SCALE_FACTOR
-    data2 = float(value2) * SCALE_FACTOR
-    #print str(data1) + "," + str(data2) # debug purpose
-    print(data1,data2)
+    while synced:
 
-text_file.close()
+        num_samples = ser.read(2)
+        num_samples = struct.unpack("<h", num_samples)[0]
+
+        print(num_samples)
+        data = ser.read(num_samples*16+1)
+        print('last symb', data[-1])
+
+        if data[-1] == 'a':
+            
+            all_vals = []
+            for i in range(num_samples):
+                values = []
+                for j in range(8):
+                    print(i*8 + j*2,i*8 + (j+1)*2)
+                    v = struct.unpack(">h", data[i*16 + j*2:i*16 + (j+1)*2])[0]
+                    values.append(v)
+                all_vals.append(values)
+
+            all_vals = np.array(all_vals)
+            print(all_vals[:,0])
+            plt.plot(all_vals[:,0])
+            plt.plot(all_vals[:,1])
+            plt.plot(all_vals[:,2])
+            plt.plot(all_vals[:,3])
+            plt.plot(all_vals[:,4])
+            plt.plot(all_vals[:,5])
+            plt.plot(all_vals[:,6])
+            plt.plot(all_vals[:,7])
+            plt.savefig('waveform.png')
+
+            synced = False
+            running = False
+        
+    else:
+        synced = False
+
+
+
